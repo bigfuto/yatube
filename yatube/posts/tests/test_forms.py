@@ -80,6 +80,8 @@ class PostFormsTests(TestCase):
         self.assertEqual(testing_post.text, form_data['text'])
         self.assertEqual(testing_post.image, 'posts/small.gif')
         self.assertEqual(testing_post.group.pk, form_data['group'])
+        self.assertEqual(testing_post.author, PostFormsTests.author)
+        self.assertEqual(testing_post.group, PostFormsTests.group)
 
     def test_edit_form(self):
         """Проверяем редактирование поста при отправке формы edit"""
@@ -127,14 +129,16 @@ class PostFormsTests(TestCase):
         self.assertEqual(testing_post.text, form_data['text'])
         self.assertEqual(testing_post.image, 'posts/new.gif')
         self.assertEqual(testing_post.group.pk, form_data['group'])
-        # Тут не понял. Логика редактирования поста в том, что-бы
-        # изменить данные в посте, а post.pk не должен меняться.
-        # Т.е. со старой страницы он никуда не должен исчезать.
-        # Добавил проверки на то, что старые данные не совпадают
-        # с новыми и группу еще заодно новую добавил, хотя смысла
-        # в этом не вижу. Прокомментируйте пожалуйста.
         self.assertNotEqual(testing_post.text, old_text)
         self.assertNotEqual(testing_post.group, old_group)
+        old_group_posts = self.author_client.get(
+            reverse(
+                'posts:group_list', kwargs={
+                    'slug': PostFormsTests.group.slug
+                }
+            )
+        ).context
+        self.assertEqual(len(old_group_posts['page_obj']), 0)
 
     def test_create_comment(self):
         """Проверяем создание комментария при отправке формы"""
@@ -161,9 +165,5 @@ class PostFormsTests(TestCase):
         self.assertEqual(Comment.objects.count(), comment_count + 1)
         testing_comment = Comment.objects.first()
         self.assertEqual(testing_comment.text, form_data['text'])
-        # Какие группы? Не вижу взаимосвязи комментариев и групп. Тут же
-        # только пост, автор поста и "комментатор". Проверить что группа
-        # не изменилась после добавления комментария? Ок...
-        # Будьте добры, объясните, вероятно я что-то не понимаю.
         self.assertEqual(testing_comment.author, PostFormsTests.author)
         self.assertEqual(testing_comment.post.group, PostFormsTests.group)

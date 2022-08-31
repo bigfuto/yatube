@@ -38,15 +38,13 @@ def profile(request, username):
     template = 'posts/profile.html'
     author = get_object_or_404(User, username=username)
     posts_list = author.posts.select_related('group').all()
-    # Тут расскажите подробнее, зачем переносить какую-либо логику в шаблон?
-    # Одно дело получить количество словарей в queryset'е, а искать значения
-    # ключей в списке словарей совсем другое. Шаблоны в django предназанчены,
-    # как мне известно, только для вывода подготовленных данных. Может я что-
-    # то упускаю и есть какой-то другой способ, подскажите пожалуйста что Вы
-    # имели ввиду под ошибкой в том, что-бы передать following в context'е?
+    following = False
+    if request.user.is_authenticated:
+        following = request.user.follower.filter(author=author).exists()
     context = {
         'author': author,
         'page_obj': paginator(request, posts_list),
+        'following': following
     }
     return render(request, template, context)
 
