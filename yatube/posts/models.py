@@ -6,9 +6,21 @@ User = get_user_model()
 
 
 class Group(models.Model):
-    title = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=200, unique=True)
-    description = models.TextField()
+    title = models.CharField(
+        verbose_name='Группа',
+        max_length=200
+    )
+    slug = models.SlugField(
+        verbose_name='Название',
+        max_length=200, unique=True
+    )
+    description = models.TextField(
+        verbose_name='Описание',
+    )
+
+    class Meta:
+        verbose_name = 'Группа'
+        verbose_name_plural = 'Группы'
 
     def __str__(self):
         return self.title
@@ -52,11 +64,13 @@ class Post(CreatedModel):
 class Comment(CreatedModel):
     post = models.ForeignKey(
         Post,
+        verbose_name='Пост комментария',
         on_delete=models.CASCADE,
         related_name='comments'
     )
     author = models.ForeignKey(
         User,
+        verbose_name='Автор комментария',
         on_delete=models.CASCADE,
         related_name='comments'
     )
@@ -64,6 +78,10 @@ class Comment(CreatedModel):
         verbose_name='Текст комментария',
         help_text='Текст вашего комментария'
     )
+
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
 
     def __str__(self):
         return self.text[:15]
@@ -84,11 +102,17 @@ class Event(models.Model):
 class Follow(CreatedModel):
     user = models.ForeignKey(
         User,
+        verbose_name='Подписчик',
         on_delete=models.CASCADE,
         related_name='follower'
     )
     author = models.ForeignKey(
         User,
+        verbose_name='Автор',
         on_delete=models.CASCADE,
         related_name='following'
     )
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'

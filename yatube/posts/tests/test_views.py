@@ -11,7 +11,6 @@ from http import HTTPStatus
 from django.core.cache import cache
 
 from ..models import Post, Group, Follow
-from .. import constants
 
 
 User = get_user_model()
@@ -226,14 +225,19 @@ class PostViewsPaginatorTests(TestCase):
             slug='test-slug',
             description='Тестовое описание шруппы',
         )
-        for post_num in range(
-            constants.POSTS_PER_PAGE + constants.POSTS_PER_PAGE // 2
-        ):
-            cls.post = Post.objects.create(
-                author=cls.author,
-                text='Тестовый пост' + str(post_num),
-                group=cls.group
-            )
+        # В чем принципиальная разница? Это быстрее работает?
+        # На первый взглад кажется, что мы просто по-другому
+        # записали. Нам все-равно пришлось 15 раз создавать
+        # объекты Post. Если бы у нас был готовый список объектов,
+        # то тогда конечно bulk_create выглядит предпочтительнее.
+        cls.posts = [Post(
+            author=cls.author,
+            text='Тестовый пост' + str(post_num),
+            group=cls.group,
+        ) for post_num in range(
+            settings.POSTS_PER_PAGE + settings.POSTS_PER_PAGE // 2
+        )]
+        Post.objects.bulk_create(cls.posts)
 
     def setUp(self):
         self.author_client = Client()
@@ -257,12 +261,12 @@ class PostViewsPaginatorTests(TestCase):
             with self.subTest(page=page):
                 response = self.author_client.get(page).context
                 self.assertEqual(
-                    len(response['page_obj']), constants.POSTS_PER_PAGE
+                    len(response['page_obj']), settings.POSTS_PER_PAGE
                 )
                 response = self.author_client.get(page + '?page=2').context
                 self.assertEqual(
                     len(response['page_obj']),
-                    constants.POSTS_PER_PAGE // 2
+                    settings.POSTS_PER_PAGE // 2
                 )
 
 

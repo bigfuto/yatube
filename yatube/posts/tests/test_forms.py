@@ -97,11 +97,18 @@ class PostFormsTests(TestCase):
             content=new_gif,
             content_type='image/gif'
         )
+        new_group = Group.objects.create(
+            title='Тестовая группа два',
+            slug='test-slug-2',
+            description='Тестовое описание группы два',
+        )
         form_data = {
             'text': 'измененный пост',
-            'group': PostFormsTests.group.pk,
+            'group': new_group.pk,
             'image': uploaded,
         }
+        old_text = self.post.text
+        old_group = PostFormsTests.group
         response = self.author_client.post(
             reverse(
                 'posts:post_edit', kwargs={'post_id': self.post.pk}
@@ -120,6 +127,14 @@ class PostFormsTests(TestCase):
         self.assertEqual(testing_post.text, form_data['text'])
         self.assertEqual(testing_post.image, 'posts/new.gif')
         self.assertEqual(testing_post.group.pk, form_data['group'])
+        # Тут не понял. Логика редактирования поста в том, что-бы
+        # изменить данные в посте, а post.pk не должен меняться.
+        # Т.е. со старой страницы он никуда не должен исчезать.
+        # Добавил проверки на то, что старые данные не совпадают
+        # с новыми и группу еще заодно новую добавил, хотя смысла
+        # в этом не вижу. Прокомментируйте пожалуйста.
+        self.assertNotEqual(testing_post.text, old_text)
+        self.assertNotEqual(testing_post.group, old_group)
 
     def test_create_comment(self):
         """Проверяем создание комментария при отправке формы"""
@@ -146,3 +161,9 @@ class PostFormsTests(TestCase):
         self.assertEqual(Comment.objects.count(), comment_count + 1)
         testing_comment = Comment.objects.first()
         self.assertEqual(testing_comment.text, form_data['text'])
+        # Какие группы? Не вижу взаимосвязи комментариев и групп. Тут же
+        # только пост, автор поста и "комментатор". Проверить что группа
+        # не изменилась после добавления комментария? Ок...
+        # Будьте добры, объясните, вероятно я что-то не понимаю.
+        self.assertEqual(testing_comment.author, PostFormsTests.author)
+        self.assertEqual(testing_comment.post.group, PostFormsTests.group)

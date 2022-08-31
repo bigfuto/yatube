@@ -3,23 +3,22 @@ from django.core.paginator import Paginator
 from .forms import PostForm, CommentForm
 from .models import Post, Group, User, Follow
 from django.contrib.auth.decorators import login_required
-from . import constants
+from django.conf import settings
 from django.views.decorators.cache import cache_page
+
+
+def paginator(request, post_list):
+    paginator = Paginator(post_list, settings.POSTS_PER_PAGE)
+    page_number = request.GET.get('page')
+    return paginator.get_page(page_number)
 
 
 @cache_page(20, key_prefix='index_page')
 def index(request):
     template = 'posts/index.html'
     post_list = Post.objects.select_related('author').all()
-    paginator = Paginator(post_list, constants.POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    following = False
-    if request.user.is_authenticated:
-        following = request.user.follower.count()
     context = {
-        'page_obj': page_obj,
-        'following': following
+        'page_obj': paginator(request, post_list),
     }
     return render(request, template, context)
 
@@ -27,13 +26,10 @@ def index(request):
 def group_posts(request, slug):
     template = 'posts/group_list.html'
     group = get_object_or_404(Group, slug=slug)
-    posts_list = group.posts.select_related('author').all()
-    paginator = Paginator(posts_list, constants.POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    post_list = group.posts.select_related('author').all()
     context = {
         'group': group,
-        'page_obj': page_obj,
+        'page_obj': paginator(request, post_list),
     }
     return render(request, template, context)
 
@@ -42,16 +38,15 @@ def profile(request, username):
     template = 'posts/profile.html'
     author = get_object_or_404(User, username=username)
     posts_list = author.posts.select_related('group').all()
-    paginator = Paginator(posts_list, constants.POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    following = False
-    if request.user.is_authenticated:
-        following = request.user.follower.filter(author=author).exists()
+    # Тут расскажите подробнее, зачем переносить какую-либо логику в шаблон?
+    # Одно дело получить количество словарей в queryset'е, а искать значения
+    # ключей в списке словарей совсем другое. Шаблоны в django предназанчены,
+    # как мне известно, только для вывода подготовленных данных. Может я что-
+    # то упускаю и есть какой-то другой способ, подскажите пожалуйста что Вы
+    # имели ввиду под ошибкой в том, что-бы передать following в context'е?
     context = {
         'author': author,
-        'page_obj': page_obj,
-        'following': following
+        'page_obj': paginator(request, posts_list),
     }
     return render(request, template, context)
 
@@ -59,11 +54,9 @@ def profile(request, username):
 def post_detail(request, post_id):
     template = 'posts/post_detail.html'
     post = get_object_or_404(Post, pk=post_id)
-    comments = post.comments.all()
     form = CommentForm()
     context = {
         'post': post,
-        'comments': comments,
         'form': form
     }
     return render(request, template, context)
@@ -123,14 +116,9 @@ def add_comment(request, post_id):
 @login_required
 def follow_index(request):
     template = 'posts/follow.html'
-    posts = Post.objects.filter(author__following__user=request.user)
-    paginator = Paginator(posts, constants.POSTS_PER_PAGE)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    following = request.user.follower.count
+    post_list = Post.objects.filter(author__following__user=request.user)
     context = {
-        'page_obj': page_obj,
-        'following': following,
+        'page_obj': paginator(request, post_list),
     }
     return render(request, template, context)
 
@@ -138,10 +126,8 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    if request.user != author and (
-        not request.user.follower.filter(author=author)
-    ):
-        Follow.objects.create(
+    if request.user != author:
+        Follow.objects.get_or_create(
             user=request.user,
             author=author
         )
