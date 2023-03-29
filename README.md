@@ -15,7 +15,7 @@
 ### Запуск проекта:
  - склонируйте репозиторий:
  ```
- git clone https://github.com/bigfuto/hw05_final.git
+ git clone https://github.com/bigfuto/yatube.git
  ```
  - В папке с проектом создайте и активируйте виртуальное окружение с python 3.7:
  ```
